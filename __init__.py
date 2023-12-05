@@ -11,17 +11,40 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-# Set the `geometry_script` module to the current module in case the folder is named differently.
-import sys
-sys.modules['geometry_script'] = sys.modules[__name__]
-
 import bpy
 import os
 import webbrowser
 
-from .api.tree import *
 from .preferences import GeometryScriptPreferences
 from .absolute_path import absolute_path
+
+from .api.arrange import *
+from .api.docs import *
+from .api.node import *
+from .api.noderegistrar import *
+from .api.nodesocket import *
+from .api.nodetree import *
+from .api.state import *
+from .api.util import *
+
+from .api.static.attribute import *
+from .api.static.curve import *
+from .api.static.expression import *
+from .api.static.input_group import *
+from .api.static.sample_mode import *
+from .api.static.zone import *
+from .api.noderegistrar import register_node_types
+
+node_tree_types = ['Geometry','Shader','Texture','Compositor']
+
+def create_documentation():
+    for node_tree_type in node_tree_types:
+         noderegistrar = register_node_types(node_tree_type)
+         Docs(noderegistrar,node_tree_type).create_documentation()
+
+
+bpy.app.timers.register(create_documentation)
+
 
 bl_info = {
     "name" : "Geometry Script",
@@ -49,8 +72,12 @@ class OpenDocumentation(bpy.types.Operator):
     bl_idname = "geometry_script.open_documentation"
     bl_label = "Open Documentation"
 
+    doc_type: bpy.props.EnumProperty(
+        name="Documentation Type",
+        items = [(node_tree_type, node_tree_type, "") for node_tree_type in node_tree_types]
+    )
     def execute(self, context):
-        webbrowser.open('file://' + absolute_path('docs/documentation.html'))
+        webbrowser.open('file://' + absolute_path(f'docs/{self.doc_type.lower()}_documentation.html'))
         return {'FINISHED'}
 
 class GeometryScriptSettings(bpy.types.PropertyGroup):
@@ -66,7 +93,9 @@ class GeometryScriptMenu(bpy.types.Menu):
         text = context.space_data.text
         if text and len(text.filepath) > 0:
             layout.prop(context.scene.geometry_script_settings, 'auto_resolve')
-        layout.operator(OpenDocumentation.bl_idname)
+
+        for node_tree_type in node_tree_types:
+            layout.operator(OpenDocumentation.bl_idname, text=f"Open {node_tree_type} Documentation").doc_type = node_tree_type
 
 def templates_menu_draw(self, context):
     self.layout.menu(TEXT_MT_templates_geometryscript.__name__)

@@ -47,7 +47,7 @@ class Curve:
         Apply the points to a curve object.
         """
         for i, point in enumerate(self.points):
-            if len(curve.points) > i:
+            if i < len(curve.points):
                 curve.points[i].location = (point.x, point.y)
                 curve.points[i].handle_type = point.handle_type.value
             else:

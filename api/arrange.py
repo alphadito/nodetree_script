@@ -5,7 +5,7 @@ from collections import deque, Counter
 def _arrange(node_tree, padding: typing.Tuple[float, float] = (50, 25)):
     # Organize the nodes into columns based on their links.
     columns: typing.List[typing.List[typing.Any]] = []
-    
+
     def topo_sort(graph):
         in_degree = {u: 0 for u in graph}
         for u in graph:
@@ -21,7 +21,7 @@ def _arrange(node_tree, padding: typing.Tuple[float, float] = (50, 25)):
                 if in_degree[v] == 0:
                     queue.append(v)
         return topo_order
-    
+
     graph = { node:set() for node in node_tree.nodes }
     node_input_link_count = Counter()
     for link in node_tree.links:
@@ -37,7 +37,7 @@ def _arrange(node_tree, padding: typing.Tuple[float, float] = (50, 25)):
         else:
             columns[column_index[node]].append(node)
     columns = reversed(columns)
-    
+
     # Arrange the columns, computing the size of the node manually so arrangement can be done without UI being visible.
     UI_SCALE = bpy.context.preferences.view.ui_scale
     NODE_HEADER_HEIGHT = 20
