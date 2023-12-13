@@ -298,7 +298,7 @@ class GeometryNodeSocket(NodeSocket):
 class ShaderNodeSocket(NodeSocket):
     type_to_node = {
                 float: ( bpy.types.ShaderNodeValue, None),
-                tuple: { 4:(bpy.types.ShaderNodeRGB,'color') }
+                tuple: { 4:(bpy.types.ShaderNodeRGB, None) }
                 }
 
 class CompositorNodeSocket(NodeSocket):
