@@ -12,7 +12,6 @@ class NodeInfo():
         self.type = node_type
         self.func_name = lower_snake_case(node_type.bl_rna.name)
         self.namespace = title_case(node_type.bl_rna.name)
-        self.typesig_stats = defaultdict(Counter)
         self.outputs = {}
         self.primary_arg = None
         self.default_value = defaultdict(lambda: defaultdict(list))
@@ -66,41 +65,38 @@ class NodeRegistrar:
         for node_prop in get_unique_subclass_properties(self.node_info.type):
             argname = node_prop.identifier
             if node_prop.type == 'ENUM':
-                type = self.create_enum(node_prop)
+                typename = self.create_enum(node_prop)
             else:
-                type = node_prop.type.title()
-            default_value = getattr(self.node_instance,node_prop.identifier)
+                typename = node_prop.type.title()
 
-            self.node_info.typesig_stats[argname][type] += 1
-            self.node_info.default_value[argname][type].append(default_value)
+            default_value = getattr(self.node_instance,node_prop.identifier)
+            self.node_info.default_value[argname][typename].append(default_value)
 
     def parse_node_inputs(self):
         for node_input in self.node_instance.inputs:
             argname = lower_snake_case(node_input.name)
-            type = nodesocket.get_shortened_socket_type_name(node_input)
+            typename = nodesocket.get_shortened_socket_type_name(type(node_input))
             if node_input.is_multi_input:
-                type = f"List[{type}]"
+                typename = f"List[{typename}]"
 
             default_value = getattr(node_input,'default_value',None)
             if node_input.type in ['VALUE','INT','VECTOR','RGBA','ROTATION']:
                 default_value = tuple(_as_iterable(default_value))
+            self.node_info.default_value[argname][typename].append(default_value)
 
-            self.node_info.typesig_stats[argname][type] += 1
-            self.node_info.default_value[argname][type].append(default_value)
-
-            socket_type = 'NodeSocket'+type
+            socket_type = 'NodeSocket'+typename
             self.enum_socket_type[socket_type] = node_input.type
             if node_input.bl_subtype_label == 'None':
                 self.socket_type_with_none_subtype[node_input.type] = socket_type
 
             if self.node_info.primary_arg is None:
-                self.node_info.primary_arg = {'argname':argname,'type': type}
+                self.node_info.primary_arg = {'argname':argname,'typename': typename}
 
     def parse_node_outputs(self):
         for node_output in self.node_instance.outputs:
             outputname = lower_snake_case(node_output.name)
-            type = nodesocket.get_shortened_socket_type_name(node_output)
-            self.node_info.outputs[outputname] = type
+            typename = nodesocket.get_shortened_socket_type_name(type(node_output))
+            self.node_info.outputs[outputname] = typename
 
     def create_enum(self,prop):
         enum_name = title_case(prop.identifier)

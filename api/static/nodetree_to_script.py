@@ -31,7 +31,7 @@ def node_to_script(node):
                 args.append(f'{argname}={repr(value)}')
 
     for node_input in enabled_sockets(node.inputs):
-        typename = get_shortened_socket_type_name(node_input)
+        typename = get_shortened_socket_type_name(type(node_input))
         argname = lower_snake_case(node_input.name)
         value = getattr(node_input,'default_value',None)
         default_value = None if has_variable_input else node_info.default_value[argname][typename][0]
