@@ -5,7 +5,7 @@ from collections import defaultdict, Counter
 from . import nodesocket
 from .nodetree import NodeTree
 from .node import Node
-from .util import lower_snake_case, title_case, upper_snake_case, get_bpy_subclasses, get_unique_subclass_properties
+from .util import lower_snake_case, title_case, upper_snake_case, get_bpy_subclasses, get_unique_subclass_properties, _as_iterable
 
 class NodeInfo():
     def __init__(self, node_type):
@@ -15,10 +15,12 @@ class NodeInfo():
         self.typesig_stats = defaultdict(Counter)
         self.outputs = {}
         self.primary_arg = None
+        self.default_value = defaultdict(lambda: defaultdict(list))
 
 class NodeRegistrar:
     enum_socket_type = {}
     socket_type_with_none_subtype = {}
+    all_node_info = {}
 
     def __init__(self):
         self.node_socket_class = None
@@ -40,16 +42,17 @@ class NodeRegistrar:
 
     def register_node_type(self,node_type):
         try:
-            node_instance = self.node_tree.nodes.new(node_type.__name__)
+            self.node_instance = self.node_tree.nodes.new(node_type.__name__)
         except:
             return
         self.node_info = NodeInfo(node_type)
         self.make_node_build_function()
         self.make_node_build_for_nodesocket_fluent_interface()
         self.parse_node_properties()
-        self.parse_node_inputs(node_instance)
-        self.parse_node_outputs(node_instance)
+        self.parse_node_inputs()
+        self.parse_node_outputs()
         self.node_infos.append(self.node_info)
+        NodeRegistrar.all_node_info[node_type] = self.node_info
 
     def make_node_build_function(self):
         func = partial(Node.build_node,primary_arg=None,node_type=self.node_info.type)
@@ -59,24 +62,31 @@ class NodeRegistrar:
         method = partialmethod(Node.build_node, node_type=self.node_info.type)
         setattr( self.node_socket_class, self.node_info.func_name,  method)
 
-    def parse_node_properties(self):
+    def parse_node_properties(self,get_current_info=True):
         for node_prop in get_unique_subclass_properties(self.node_info.type):
             argname = node_prop.identifier
             if node_prop.type == 'ENUM':
                 type = self.create_enum(node_prop)
             else:
                 type = node_prop.type.title()
+            default_value = getattr(self.node_instance,node_prop.identifier)
 
             self.node_info.typesig_stats[argname][type] += 1
+            self.node_info.default_value[argname][type].append(default_value)
 
-    def parse_node_inputs(self,node_instance):
-        for node_input in node_instance.inputs:
+    def parse_node_inputs(self):
+        for node_input in self.node_instance.inputs:
             argname = lower_snake_case(node_input.name)
             type = nodesocket.get_shortened_socket_type_name(node_input)
             if node_input.is_multi_input:
                 type = f"List[{type}]"
 
+            default_value = getattr(node_input,'default_value',None)
+            if node_input.type in ['VALUE','INT','VECTOR','RGBA','ROTATION']:
+                default_value = tuple(_as_iterable(default_value))
+
             self.node_info.typesig_stats[argname][type] += 1
+            self.node_info.default_value[argname][type].append(default_value)
 
             socket_type = 'NodeSocket'+type
             self.enum_socket_type[socket_type] = node_input.type
@@ -86,8 +96,8 @@ class NodeRegistrar:
             if self.node_info.primary_arg is None:
                 self.node_info.primary_arg = {'argname':argname,'type': type}
 
-    def parse_node_outputs(self,node_instance):
-        for node_output in node_instance.outputs:
+    def parse_node_outputs(self):
+        for node_output in self.node_instance.outputs:
             outputname = lower_snake_case(node_output.name)
             type = nodesocket.get_shortened_socket_type_name(node_output)
             self.node_info.outputs[outputname] = type
@@ -104,9 +114,9 @@ class NodeRegistrar:
 
         return  f"{self.node_info.namespace}.{enum_name}"
 
+    math_aliases= {'cosine':'cos','sine':'sin','tangent':'tan',
+                'arcsine':'asin','arccosine':'acos','arctangent':'atan','arctan2':'atan2'}
     def add_math_functions(self):
-        aliases={'cos':'cosine','sin':'sine','tan':'tangent',
-                'asin':'arcsine','acos':'arccosine','atan':'arctangent','atan2':'arctan2'}
         def _math(*vectors_or_values,operation=None):
             vectors_or_values = [ self.node_socket_class.create(value) for value in vectors_or_values]
             enum_socket_type = vectors_or_values[0]._socket.type
@@ -122,7 +132,7 @@ class NodeRegistrar:
             if lower_snake_case(operation) not in globals():
                 globals()[lower_snake_case(operation)]= partial(_math,operation=operation)
 
-        for alias,name in aliases.items():
+        for name,alias in self.__class__.math_aliases.items():
             globals()[alias]=globals()[name]
 
     def clean_up(self):

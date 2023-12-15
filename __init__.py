@@ -14,6 +14,7 @@
 import bpy
 import os
 import webbrowser
+import json
 
 from .preferences import GeometryScriptPreferences
 from .absolute_path import absolute_path
@@ -31,10 +32,11 @@ from .api.static.attribute import *
 from .api.static.curve import *
 from .api.static.expression import *
 from .api.static.input_group import *
+from .api.static.nodetree_to_script import *
 from .api.static.sample_mode import *
 from .api.static.zone import *
-from .api.noderegistrar import register_node_types
 
+from .api.noderegistrar import register_node_types, NodeRegistrar
 node_tree_types = ['Geometry','Shader','Texture','Compositor']
 
 def create_documentation():
@@ -56,6 +58,22 @@ bl_info = {
     "warning" : "",
     "category" : "Node"
 }
+class CopySelectedNodes(bpy.types.Operator):
+    """Copy Selected Nodes to Clipboard"""
+    bl_idname = "node.copy_selected"
+    bl_label = "Copy Selected Nodes"
+
+    def execute(self, context):
+        if context.space_data.type == 'NODE_EDITOR' and context.space_data.node_tree:
+            node_tree = context.space_data.node_tree
+            selected_nodes = [node for node in node_tree.nodes if node.select]
+            content = '\n'.join([node_to_script(node) for node in selected_nodes])
+            bpy.context.window_manager.clipboard = content
+            self.report({'INFO'}, f"{len(selected_nodes)} nodes copied to clipboard.")
+
+        return {'FINISHED'}
+def menu_func(self, context):
+    self.layout.operator(CopySelectedNodes.bl_idname)
 
 class TEXT_MT_templates_geometryscript(bpy.types.Menu):
     bl_label = "Geometry Script"
@@ -133,6 +151,9 @@ def register():
 
     bpy.app.timers.register(auto_resolve, persistent=True)
 
+    bpy.utils.register_class(CopySelectedNodes)
+    bpy.types.NODE_MT_context_menu.append(menu_func)
+
 def unregister():
     bpy.utils.unregister_class(TEXT_MT_templates_geometryscript)
     bpy.types.TEXT_MT_templates.remove(templates_menu_draw)
@@ -141,6 +162,9 @@ def unregister():
     bpy.utils.unregister_class(OpenDocumentation)
     bpy.utils.unregister_class(GeometryScriptMenu)
     bpy.types.TEXT_HT_header.remove(editor_header_draw)
+
+    bpy.utils.unregister_class(CopySelectedNodes)
+    bpy.types.NODE_MT_context_menu.remove(menu_func)
     try:
         bpy.app.timers.unregister(auto_resolve)
     except:
