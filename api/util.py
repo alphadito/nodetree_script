@@ -1,12 +1,16 @@
 import bpy
 import re
+from collections import deque
 
 lower_snake_case = lambda x: re.sub(r'[ -./]', '_', x.lower())
 title_case = lambda x: re.sub(r'[- _./]', '', x.title())
 upper_snake_case = lambda x: ('_' if not x[0].isalpha() else '') + re.sub(r'[ -./]', '_', x.upper())
 
 def _as_iterable(x):
-    return iter(x) if hasattr(x, '__iter__') else [x]
+    try :
+        return iter(x)
+    except:
+        return [x]
 
 def get_bpy_subclasses(base_bpy_type,include_base=False):
     for bpy_type_name in dir(bpy.types):
@@ -27,3 +31,25 @@ def enabled_sockets(sockets):
     for socket in sockets:
         if socket.enabled:
             yield socket
+
+class Attrs:
+    def __init__(self,**kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+def topo_sort(graph):
+        in_degree = {u: 0 for u in graph}
+        for u in graph:
+            for v in graph[u]:
+                in_degree[v] += 1
+        queue = deque([u for u in in_degree if in_degree[u] == 0])
+        topo_order = []
+        while queue:
+            u = queue.popleft()
+            topo_order.append(u)
+            for v in graph[u]:
+                in_degree[v] -= 1
+                if in_degree[v] == 0:
+                    queue.append(v)
+        return topo_order
+

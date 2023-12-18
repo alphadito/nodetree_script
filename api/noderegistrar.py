@@ -1,11 +1,12 @@
 import bpy
 import enum
 from functools import partial, partialmethod
-from collections import defaultdict, Counter
+from collections import defaultdict
 from . import nodesocket
 from .nodetree import NodeTree
 from .node import Node
 from .util import lower_snake_case, title_case, upper_snake_case, get_bpy_subclasses, get_unique_subclass_properties, _as_iterable
+from mathutils import Vector
 
 class NodeInfo():
     def __init__(self, node_type):
@@ -15,6 +16,7 @@ class NodeInfo():
         self.outputs = {}
         self.primary_arg = None
         self.default_value = defaultdict(lambda: defaultdict(list))
+        self.input_index = {}
 
 class NodeRegistrar:
     enum_socket_type = {}
@@ -70,6 +72,9 @@ class NodeRegistrar:
                 typename = node_prop.type.title()
 
             default_value = getattr(self.node_instance,node_prop.identifier)
+            if type(default_value) == Vector:
+                default_value = tuple(default_value)
+            self.node_info.input_index[node_prop.identifier] = len(self.node_info.default_value[argname][typename])
             self.node_info.default_value[argname][typename].append(default_value)
 
     def parse_node_inputs(self):
@@ -82,7 +87,9 @@ class NodeRegistrar:
             default_value = getattr(node_input,'default_value',None)
             if node_input.type in ['VALUE','INT','VECTOR','RGBA','ROTATION']:
                 default_value = tuple(_as_iterable(default_value))
+            self.node_info.input_index[node_input.identifier] = len(self.node_info.default_value[argname][typename])
             self.node_info.default_value[argname][typename].append(default_value)
+
 
             socket_type = 'NodeSocket'+typename
             self.enum_socket_type[socket_type] = node_input.type
@@ -114,11 +121,15 @@ class NodeRegistrar:
                 'arcsine':'asin','arccosine':'acos','arctangent':'atan','arctan2':'atan2'}
     def add_math_functions(self):
         def _math(*vectors_or_values,operation=None):
-            vectors_or_values = [ self.node_socket_class.create(value) for value in vectors_or_values]
-            enum_socket_type = vectors_or_values[0]._socket.type
+            if type(vectors_or_values[0]) == tuple:
+                vector_like = True
+            elif isinstance(vectors_or_values[0],nodesocket.NodeSocket):
+                vector_like = vectors_or_values[0]._socket.type in  ['VECTOR','RGBA']
+            else:
+                vector_like = False
             if len(vectors_or_values) == 1:
                 vectors_or_values = vectors_or_values[0]
-            if enum_socket_type in  ['VECTOR','RGBA']:
+            if vector_like:
                 return vector_math(operation=operation, vector=vectors_or_values)
             else:
                 return math(operation=operation, value=vectors_or_values)

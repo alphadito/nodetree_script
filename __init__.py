@@ -14,7 +14,6 @@
 import bpy
 import os
 import webbrowser
-import json
 
 from .preferences import GeometryScriptPreferences
 from .absolute_path import absolute_path
@@ -32,9 +31,10 @@ from .api.static.attribute import *
 from .api.static.curve import *
 from .api.static.expression import *
 from .api.static.input_group import *
-from .api.static.nodetree_to_script import *
 from .api.static.sample_mode import *
 from .api.static.zone import *
+
+from .operators.nodetree_to_script import *
 
 from .api.noderegistrar import register_node_types, NodeRegistrar
 node_tree_types = ['Geometry','Shader','Texture','Compositor']
@@ -67,7 +67,7 @@ class CopySelectedNodes(bpy.types.Operator):
         if context.space_data.type == 'NODE_EDITOR' and context.space_data.node_tree:
             node_tree = context.space_data.node_tree
             selected_nodes = [node for node in node_tree.nodes if node.select]
-            content = '\n'.join([node_to_script(node) for node in selected_nodes])
+            content = nodes_to_script(selected_nodes)
             bpy.context.window_manager.clipboard = content
             self.report({'INFO'}, f"{len(selected_nodes)} nodes copied to clipboard.")
 
