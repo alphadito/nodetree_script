@@ -238,10 +238,12 @@ class ShaderNodeTree(NodeTree):
         self._node_tree = self.get_node_tree()
 
     def build_tree(self, builder):
-        super().build_tree(builder)
+        group_reference = super().build_tree(builder)
         if self.material_tree:
             self.set_material()
-        return self.get_material()
+            return self.get_material()
+        else:
+            return group_reference
 
 class CompositorNodeTree(NodeTree):
     node_tree_type = 'Compositor'
