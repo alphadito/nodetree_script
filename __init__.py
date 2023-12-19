@@ -58,22 +58,42 @@ bl_info = {
     "warning" : "",
     "category" : "Node"
 }
+
 class CopySelectedNodes(bpy.types.Operator):
     """Copy Selected Nodes to Clipboard"""
     bl_idname = "node.copy_selected"
-    bl_label = "Copy Selected Nodes"
+    bl_label = "Copy Selected Nodes as Script"
 
     def execute(self, context):
         if context.space_data.type == 'NODE_EDITOR' and context.space_data.node_tree:
             node_tree = context.space_data.node_tree
             selected_nodes = [node for node in node_tree.nodes if node.select]
-            content = nodes_to_script(selected_nodes)
-            bpy.context.window_manager.clipboard = content
+            script = nodes_to_script(selected_nodes)
+            bpy.context.window_manager.clipboard = script
             self.report({'INFO'}, f"{len(selected_nodes)} nodes copied to clipboard.")
 
         return {'FINISHED'}
-def menu_func(self, context):
+
+
+class CopyNodeTree(bpy.types.Operator):
+    """Copy NodeTree to Clipboard"""
+    bl_idname = "node.copy_node_tree"
+    bl_label = "Copy NodeTree as Script"
+
+    def execute(self, context):
+        if context.space_data.type == 'NODE_EDITOR' and context.space_data.node_tree:
+            node_tree = context.space_data.node_tree
+            selected_nodes = [node for node in node_tree.nodes]
+            script = nodes_to_script(selected_nodes,make_function=True)
+            bpy.context.window_manager.clipboard = script
+            self.report({'INFO'}, f"{len(selected_nodes)} nodes copied to clipboard.")
+
+        return {'FINISHED'}
+
+def copy_menu(self, context):
     self.layout.operator(CopySelectedNodes.bl_idname)
+    self.layout.operator(CopyNodeTree.bl_idname)
+
 
 class TEXT_MT_templates_geometryscript(bpy.types.Menu):
     bl_label = "Geometry Script"
@@ -152,7 +172,8 @@ def register():
     bpy.app.timers.register(auto_resolve, persistent=True)
 
     bpy.utils.register_class(CopySelectedNodes)
-    bpy.types.NODE_MT_context_menu.append(menu_func)
+    bpy.utils.register_class(CopyNodeTree)
+    bpy.types.NODE_MT_context_menu.append(copy_menu)
 
 def unregister():
     bpy.utils.unregister_class(TEXT_MT_templates_geometryscript)
@@ -164,7 +185,8 @@ def unregister():
     bpy.types.TEXT_HT_header.remove(editor_header_draw)
 
     bpy.utils.unregister_class(CopySelectedNodes)
-    bpy.types.NODE_MT_context_menu.remove(menu_func)
+    bpy.utils.unregister_class(CopyNodeTree)
+    bpy.types.NODE_MT_context_menu.remove(copy_menu)
     try:
         bpy.app.timers.unregister(auto_resolve)
     except:

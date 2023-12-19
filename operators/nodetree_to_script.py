@@ -1,19 +1,24 @@
 import bpy
 import numpy as np
 from ..api.noderegistrar import NodeRegistrar,upper_snake_case
-from ..api.util import get_unique_subclass_properties, _as_iterable, title_case, lower_snake_case, enabled_sockets, Attrs, topo_sort
+from ..api.util import get_unique_subclass_properties, _as_iterable, title_case, lower_snake_case, enabled_sockets, Attrs, topo_sort, non_virtual_sockets
 from ..api.nodesocket import get_shortened_socket_type_name
+from ..api.nodetree import NodeTree
 from collections import Counter, defaultdict
-from mathutils import Vector
+from mathutils import Vector as Vec
 
 
+node_groups = [bpy.types.GeometryNodeGroup,bpy.types.ShaderNodeGroup,bpy.types.CompositorNodeGroup,bpy.types.TextureNodeGroup]
 is_math_operation_arg = lambda func_name, argname: func_name in ['math','vector_math'] and argname == 'operation'
 is_math_vector_or_value_arg = lambda func_name, argname: func_name in ['math','vector_math'] and argname in ['vector','value']
+is_node_tree_input_arg = lambda node_type, argname: node_type in node_groups and argname == 'node_tree'
+is_curve_mapping_arg = lambda value: type(value) == bpy.types.CurveMapping
+
 def node_to_script(node):
     node_type = type(node)
     node_info = NodeRegistrar.all_node_info[node_type]
     func_name = node_info.func_name
-    has_variable_input = node_type in [bpy.types.NodeGroupOutput,bpy.types.GeometryNodeGroup,bpy.types.ShaderNodeGroup,bpy.types.CompositorNodeGroup,bpy.types.TextureNodeGroup]
+    has_variable_input = node_type in ( [bpy.types.NodeGroupOutput] + node_groups )
     args=defaultdict(list)
 
     for prop in get_unique_subclass_properties(node_info.type):
@@ -22,10 +27,18 @@ def node_to_script(node):
         value = getattr(node,prop.identifier)
 
         default_value = None if has_variable_input else node_info.default_value[argname][typename][0]
-        if type(value) == Vector:
+        if type(value) == Vec:
             value = tuple(value)
+
         if prop.type == 'POINTER':
-            continue
+            if is_node_tree_input_arg(node_type,argname):
+                args[argname].append(repr(value))
+                continue
+            elif is_curve_mapping_arg(value):
+                args[argname].append(value)
+                continue
+            else:
+                continue
 
         is_default_value = value == default_value
         if not is_default_value or is_math_operation_arg(node_info.func_name,argname):
@@ -59,7 +72,10 @@ def node_to_script(node):
     return script_info
 
 
-def nodes_to_script(nodes):
+def nodes_to_script(nodes,make_function=False):
+    outputs = []
+    inputs = {}
+
     if len(nodes) == 0:
         return ''
     node_tree = nodes[0].id_data
@@ -79,11 +95,35 @@ def nodes_to_script(nodes):
         symbol_count[script_info[node].func_name]+=1
         script_info[node].symbol = f'{script_info[node].func_name}{symbol_count[script_info[node].func_name]}'
 
+        if type(node) == bpy.types.NodeGroupInput:
+            for tree_input in NodeTree(node_tree.name).inputs:
+                argname = lower_snake_case(tree_input.name)
+                socket_type = tree_input.bl_socket_idname
+                typename = socket_type.replace('NodeSocket','')
+                enum_socket_type = NodeRegistrar.enum_socket_type.get(socket_type)
+                value = getattr(tree_input,'default_value',None)
+                if enum_socket_type in ['VECTOR','RGBA','ROTATION']:
+                    value = tuple(_as_iterable(value))
+                inputs[argname] = Attrs(socket_type=typename,default_value=value)
+
     for link in links:
         from_symbol = script_info[link.from_node].symbol
         if len( list(enabled_sockets(link.from_node.outputs)) ) > 1:
             from_symbol += f".{lower_snake_case(link.from_socket.name)}"
-        input_index = NodeRegistrar.all_node_info[type(link.to_node)].input_index[link.to_socket.identifier]
+
+        if make_function:
+            if type(link.from_node) == bpy.types.NodeGroupInput:
+                from_symbol = lower_snake_case(link.from_socket.name)
+
+        if type(link.to_node) == bpy.types.NodeGroupOutput:
+            outputs.append(from_symbol)
+            continue
+
+        if type(link.to_node) in node_groups:
+            input_index = 0
+        else:
+            input_index = NodeRegistrar.all_node_info[type(link.to_node)].input_index[link.to_socket.identifier]
+
         if link.to_socket.is_multi_input:
             script_info[link.to_node].args[lower_snake_case(link.to_socket.name)][input_index].append(from_symbol)
         else:
@@ -91,12 +131,21 @@ def nodes_to_script(nodes):
 
     script_lines = []
     for node in sorted_nodes:
+        if type(node) == bpy.types.NodeGroupOutput:
+            continue
+
+        if make_function:
+            if type(node) == bpy.types.NodeGroupInput:
+                continue
+
         symbol = script_info[node].symbol
         func_name = script_info[node].func_name
         func_args = []
         alt_func_name = None
-        no_args_node = type(node) in [bpy.types.ShaderNodeValue,bpy.types.ShaderNodeRGB,bpy.types.CompositorNodeValue]
-        if no_args_node:
+        no_args_input_node = type(node) in [bpy.types.ShaderNodeValue,bpy.types.ShaderNodeRGB,bpy.types.CompositorNodeValue]
+
+
+        if no_args_input_node:
             value = node.outputs[0].default_value
             value = tuple(_as_iterable(value))
             if len(value) == 1:
@@ -104,6 +153,7 @@ def nodes_to_script(nodes):
             script_line = f"{symbol} = State.NodeSocket.create({value})"
             script_lines.append(script_line)
             continue
+
         for arg, vals in script_info[node].args.items():
             if is_math_operation_arg(func_name,arg):
                 operation = vals[0].split('.')[-1]
@@ -114,10 +164,21 @@ def nodes_to_script(nodes):
                 func_args.append(arg_str)
                 continue
 
+            if is_curve_mapping_arg(vals[0]):
+                curves = str([ "Curve([" + ','.join( f"Point({p.location[0]},{p.location[1]})" for p in curve.points) + "])" for curve in vals[0].curves]).replace("'","")
+                if len(vals[0].curves) == 1:
+                    curves = curves[1:-1]
+                script_line = f"{symbol}_mapping = {curves}"
+                script_lines.append(script_line)
+                arg_str = f"{arg}={symbol}_mapping"
+                func_args.append(arg_str)
+                continue
+
             val = vals[0] if len(vals) == 1 else vals
-            val = str(val).replace("'","")
 
             arg_str = f"{arg}={val}"
+            if type(val) == list:
+                arg_str = arg_str.replace("'","")
             func_args.append(arg_str)
 
         if alt_func_name:
@@ -126,6 +187,13 @@ def nodes_to_script(nodes):
 
         script_line = f"{symbol} = {func_call}"
         script_lines.append(script_line)
-    script = '\n'.join(script_lines)
 
+    delim = '\n    ' if make_function else '\n'
+    script = delim.join(script_lines)
+
+    if make_function:
+        default_value_str = lambda val: f' = {val.default_value}' if val.default_value else ''
+        function_def_script_line = f"def {node_tree.name}_copy({', '.join([f'{arg}: {val.socket_type}{default_value_str(val)}' for arg, val in inputs.items()])}):"
+        return_script_line = f"    return {', '.join(outputs)}"
+        script = '\n'.join([f"@{node_tree.type.lower()}tree",function_def_script_line,'    '+script,return_script_line])
     return script

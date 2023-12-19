@@ -7,8 +7,6 @@ from ..node import NodeOutputs, set_or_create_link
 from ..nodetree import InputInfo
 from ..util import _as_iterable, non_virtual_sockets
 
-def non_virtual_sockets(sockets):
-    return [ socket for socket in sockets if type(socket) != bpy.types.NodeSocketVirtual ]
 
 def socket_type_to_data_type(socket_type):
     match socket_type:
