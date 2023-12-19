@@ -66,7 +66,7 @@ class CopySelectedNodes(bpy.types.Operator):
 
     def execute(self, context):
         if context.space_data.type == 'NODE_EDITOR' and context.space_data.node_tree:
-            node_tree = context.space_data.node_tree
+            node_tree = context.space_data.path[-1].node_tree
             selected_nodes = [node for node in node_tree.nodes if node.select]
             script = nodes_to_script(selected_nodes)
             bpy.context.window_manager.clipboard = script
@@ -82,7 +82,7 @@ class CopyNodeTree(bpy.types.Operator):
 
     def execute(self, context):
         if context.space_data.type == 'NODE_EDITOR' and context.space_data.node_tree:
-            node_tree = context.space_data.node_tree
+            node_tree = context.space_data.path[-1].node_tree
             selected_nodes = [node for node in node_tree.nodes]
             script = nodes_to_script(selected_nodes,make_function=True)
             bpy.context.window_manager.clipboard = script
