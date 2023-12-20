@@ -63,7 +63,7 @@ class NodeRegistrar:
         method = partialmethod(Node.build_node, node_type=self.node_info.type)
         setattr( self.node_socket_class, self.node_info.func_name,  method)
 
-    def parse_node_properties(self,get_current_info=True):
+    def parse_node_properties(self):
         for node_prop in get_unique_subclass_properties(self.node_info.type):
             argname = node_prop.identifier
             if node_prop.type == 'ENUM':

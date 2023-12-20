@@ -146,11 +146,18 @@ def nodes_to_script(nodes,make_function=False):
 
 
         if no_args_input_node:
-            value = node.outputs[0].default_value
-            value = tuple(_as_iterable(value))
-            if len(value) == 1:
-                value = value[0]
-            script_line = f"{symbol} = State.NodeSocket.create({value})"
+            data_path = f'nodes["{node.name}"].outputs[0].default_value'
+            fcurve = node_tree.animation_data.drivers.find(data_path)
+            if fcurve:
+                func_call = f"scripted_expression('{fcurve.driver.expression}')"
+            else:
+                value = node.outputs[0].default_value
+                value = tuple(_as_iterable(value))
+                if len(value) == 1:
+                    value = value[0]
+                func_call = f"State.NodeSocket.create({value})"
+
+            script_line = f"{symbol} = {func_call}"
             script_lines.append(script_line)
             continue
 
