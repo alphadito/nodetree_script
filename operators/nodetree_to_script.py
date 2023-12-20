@@ -1,11 +1,11 @@
 import bpy
 import numpy as np
 from ..api.noderegistrar import NodeRegistrar,upper_snake_case
-from ..api.util import get_unique_subclass_properties, _as_iterable, title_case, lower_snake_case, enabled_sockets, Attrs, topo_sort, non_virtual_sockets
+from ..api.util import get_unique_subclass_properties, _as_iterable, title_case, lower_snake_case, enabled_sockets, Attrs, topo_sort
 from ..api.nodesocket import get_shortened_socket_type_name
 from ..api.nodetree import NodeTree
 from collections import Counter, defaultdict
-from mathutils import Vector as Vec
+from mathutils import Vector
 
 
 node_groups = [bpy.types.GeometryNodeGroup,bpy.types.ShaderNodeGroup,bpy.types.CompositorNodeGroup,bpy.types.TextureNodeGroup]
@@ -27,7 +27,7 @@ def node_to_script(node):
         value = getattr(node,prop.identifier)
 
         default_value = None if has_variable_input else node_info.default_value[argname][typename][0]
-        if type(value) == Vec:
+        if type(value) == Vector:
             value = tuple(value)
 
         if prop.type == 'POINTER':
@@ -199,8 +199,40 @@ def nodes_to_script(nodes,make_function=False):
     script = delim.join(script_lines)
 
     if make_function:
-        default_value_str = lambda val: f' = {val.default_value}' if val.default_value else ''
+        default_value_str = lambda val: f' = {val.default_value}' if val.default_value is not None else ''
         function_def_script_line = f"def {node_tree.name}_copy({', '.join([f'{arg}: {val.socket_type}{default_value_str(val)}' for arg, val in inputs.items()])}):"
         return_script_line = f"    return {', '.join(outputs)}"
         script = '\n'.join([f"@{node_tree.type.lower()}tree",function_def_script_line,'    '+script,return_script_line])
     return script
+
+
+class CopySelectedNodes(bpy.types.Operator):
+    """Copy Selected Nodes to Clipboard"""
+    bl_idname = "node.copy_selected"
+    bl_label = "Copy Selected Nodes as Script"
+
+    def execute(self, context):
+        if context.space_data.type == 'NODE_EDITOR' and context.space_data.node_tree:
+            node_tree = context.space_data.path[-1].node_tree
+            selected_nodes = [node for node in node_tree.nodes if node.select]
+            script = nodes_to_script(selected_nodes)
+            bpy.context.window_manager.clipboard = script
+            self.report({'INFO'}, f"{len(selected_nodes)} nodes copied to clipboard.")
+
+        return {'FINISHED'}
+
+
+class CopyNodeTree(bpy.types.Operator):
+    """Copy NodeTree to Clipboard"""
+    bl_idname = "node.copy_node_tree"
+    bl_label = "Copy NodeTree as Script"
+
+    def execute(self, context):
+        if context.space_data.type == 'NODE_EDITOR' and context.space_data.node_tree:
+            node_tree = context.space_data.path[-1].node_tree
+            selected_nodes = [node for node in node_tree.nodes]
+            script = nodes_to_script(selected_nodes,make_function=True)
+            bpy.context.window_manager.clipboard = script
+            self.report({'INFO'}, f"{len(selected_nodes)} nodes copied to clipboard.")
+
+        return {'FINISHED'}

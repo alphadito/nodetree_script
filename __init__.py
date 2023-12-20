@@ -35,8 +35,9 @@ from .api.static.sample_mode import *
 from .api.static.zone import *
 
 from .operators.nodetree_to_script import *
+from .operators.nodetree_to_script import CopySelectedNodes, CopyNodeTree
 
-from .api.noderegistrar import register_node_types, NodeRegistrar
+from .api.noderegistrar import register_node_types
 node_tree_types = ['Geometry','Shader','Texture','Compositor']
 
 def create_documentation():
@@ -58,37 +59,6 @@ bl_info = {
     "warning" : "",
     "category" : "Node"
 }
-
-class CopySelectedNodes(bpy.types.Operator):
-    """Copy Selected Nodes to Clipboard"""
-    bl_idname = "node.copy_selected"
-    bl_label = "Copy Selected Nodes as Script"
-
-    def execute(self, context):
-        if context.space_data.type == 'NODE_EDITOR' and context.space_data.node_tree:
-            node_tree = context.space_data.path[-1].node_tree
-            selected_nodes = [node for node in node_tree.nodes if node.select]
-            script = nodes_to_script(selected_nodes)
-            bpy.context.window_manager.clipboard = script
-            self.report({'INFO'}, f"{len(selected_nodes)} nodes copied to clipboard.")
-
-        return {'FINISHED'}
-
-
-class CopyNodeTree(bpy.types.Operator):
-    """Copy NodeTree to Clipboard"""
-    bl_idname = "node.copy_node_tree"
-    bl_label = "Copy NodeTree as Script"
-
-    def execute(self, context):
-        if context.space_data.type == 'NODE_EDITOR' and context.space_data.node_tree:
-            node_tree = context.space_data.path[-1].node_tree
-            selected_nodes = [node for node in node_tree.nodes]
-            script = nodes_to_script(selected_nodes,make_function=True)
-            bpy.context.window_manager.clipboard = script
-            self.report({'INFO'}, f"{len(selected_nodes)} nodes copied to clipboard.")
-
-        return {'FINISHED'}
 
 def copy_menu(self, context):
     self.layout.operator(CopySelectedNodes.bl_idname)
