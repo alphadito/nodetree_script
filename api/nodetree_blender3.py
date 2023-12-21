@@ -48,7 +48,6 @@ FutureGeometryNodeTree.__bases__ = (NodeTree,)
 class GeometryNodeTree(FutureGeometryNodeTree):
     def __init__(self,node_tree_name=None):
         from .dynamic.geometry import group
-        self.node_tree_type = 'Geometry'
         self.nodegroup = group
         NodeTree.__init__(self,node_tree_name)
     def get_node_tree(self):
@@ -58,7 +57,7 @@ FutureShaderNodeTree.__bases__ = (NodeTree,)
 class ShaderNodeTree(FutureShaderNodeTree):
     def __init__(self,node_tree_name=None,**kwargs):
         from .dynamic.shader import group
-        self.node_tree_type = 'Shader'
+        self.material_tree = False
         self.nodegroup = group
         NodeTree.__init__(self,node_tree_name,**kwargs)
 
@@ -66,14 +65,12 @@ FutureCompositorNodeTree.__bases__ = (NodeTree,)
 class CompositorNodeTree(FutureCompositorNodeTree):
     def __init__(self,node_tree_name=None):
         from .dynamic.compositor import group
-        self.node_tree_type = 'Compositor'
         self.nodegroup = group
         NodeTree.__init__(self,node_tree_name)
 
 FutureTextureNodeTree.__bases__ = (NodeTree,)
-class TextureNodeTree(NodeTree):
+class TextureNodeTree(FutureTextureNodeTree):
     def __init__(self,node_tree_name=None):
         from .dynamic.texture import group
-        self.node_tree_type = 'Texture'
         self.nodegroup = group
         NodeTree.__init__(self,node_tree_name)
