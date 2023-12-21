@@ -319,10 +319,8 @@ class TextureNodeSocket(NodeSocket):
         from .dynamic.texture import math
         return math
 
-def get_shortened_socket_type_name(node_socket):
-    if isinstance(node_socket,bpy.types.NodeSocketStandard):
-        node_socket = type(node_socket)
-    return node_socket.__name__.replace('NodeSocket', '')
+def get_shortened_socket_type_name(socket_type):
+    return socket_type.__name__.replace('NodeSocket', '')
 
 def create_node_socket_subclasses_for_annotations(base_node_socket_class, module):
     for socket_type in get_bpy_subclasses(bpy.types.NodeSocketStandard):

@@ -22,19 +22,20 @@ class Docs():
 
             node_info.image = f"https://docs.blender.org/manual/en/{version}/_images/{img_prefix}node-types_{node_info.type.__name__}"
             node_info.link = f"https://docs.blender.org/manual/en/latest/modeling/geometry_nodes/None/{node_info.func_name}.html"
-            node_info.typesig = Docs.make_type_signature(node_info.typesig_stats,union_func=lambda x: x +' | None = None')
+            node_info.typesig = Docs.make_type_signature(node_info.default_value,union_func=lambda x: x +' | None = None')
 
     @staticmethod
-    def make_type_signature(typesig_stats,argdelim=', ',type_func=lambda x: x,union_func=lambda x: x,debug=False):
+    def make_type_signature(default_value,argdelim=', ',type_func=lambda x: x,union_func=lambda x: x):
         union_types = {}
-        for argname, type_count in typesig_stats.items():
+        for argname, types in default_value.items():
             type_variants = []
-            for type, count in type_count.items():
+            for typename, default_value_list in types.items():
+                count = len(default_value_list)
                 for i in range(1, count + 1):
                     composite_type = ""
                     if i > 1:
                         composite_type += "Tuple["
-                    composite_type += ', '.join([type_func(type)]*i)
+                    composite_type += ', '.join([type_func(typename)]*i)
                     if i > 1:
                         composite_type += "]"
                     type_variants.append( composite_type )
@@ -171,7 +172,7 @@ class Docs():
         def primary_arg_doc(node_info):
             return f"""
             <h4>Chain Syntax</h4>
-            <pre><code>{node_info.primary_arg['argname']}: { color_style(node_info.primary_arg['type'])} = ...\n{node_info.primary_arg['argname']}.{node_info.func_name}(...)</code></pre>
+            <pre><code>{node_info.primary_arg['argname']}: { color_style(node_info.primary_arg['typename'])} = ...\n{node_info.primary_arg['argname']}.{node_info.func_name}(...)</code></pre>
             """
 
         argdelim=',\n  '
@@ -181,7 +182,7 @@ class Docs():
                 <div style="margin-top: 5px;">
                     <img src="{node_info.image}.webp" onerror="if (this.src != '{node_info.image}.png') this.src = '{node_info.image}.png'" />
                     <h4>Signature</h4>
-                    <pre><code>{node_info.func_name}(\n  {Docs.make_type_signature(node_info.typesig_stats,argdelim=argdelim,type_func=color_style)[1:-1]}\n)</code></pre>
+                    <pre><code>{node_info.func_name}(\n  {Docs.make_type_signature(node_info.default_value,argdelim=argdelim,type_func=color_style)[1:-1]}\n)</code></pre>
                     <h4>Result</h4>
                     <pre><code>{output_doc}</code></pre>
                     {primary_arg_doc(node_info) if node_info.primary_arg is not None else ""}

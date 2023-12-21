@@ -33,8 +33,11 @@ from .api.static.expression import *
 from .api.static.input_group import *
 from .api.static.sample_mode import *
 from .api.static.zone import *
-from .api.noderegistrar import register_node_types
 
+from .operators.nodetree_to_script import *
+from .operators.nodetree_to_script import CopySelectedNodes, CopyNodeTree
+
+from .api.noderegistrar import register_node_types
 node_tree_types = ['Geometry','Shader','Texture','Compositor']
 
 def create_documentation():
@@ -56,6 +59,11 @@ bl_info = {
     "warning" : "",
     "category" : "Node"
 }
+
+def copy_menu(self, context):
+    self.layout.operator(CopySelectedNodes.bl_idname)
+    self.layout.operator(CopyNodeTree.bl_idname)
+
 
 class TEXT_MT_templates_geometryscript(bpy.types.Menu):
     bl_label = "Geometry Script"
@@ -133,6 +141,10 @@ def register():
 
     bpy.app.timers.register(auto_resolve, persistent=True)
 
+    bpy.utils.register_class(CopySelectedNodes)
+    bpy.utils.register_class(CopyNodeTree)
+    bpy.types.NODE_MT_context_menu.append(copy_menu)
+
 def unregister():
     bpy.utils.unregister_class(TEXT_MT_templates_geometryscript)
     bpy.types.TEXT_MT_templates.remove(templates_menu_draw)
@@ -141,6 +153,10 @@ def unregister():
     bpy.utils.unregister_class(OpenDocumentation)
     bpy.utils.unregister_class(GeometryScriptMenu)
     bpy.types.TEXT_HT_header.remove(editor_header_draw)
+
+    bpy.utils.unregister_class(CopySelectedNodes)
+    bpy.utils.unregister_class(CopyNodeTree)
+    bpy.types.NODE_MT_context_menu.remove(copy_menu)
     try:
         bpy.app.timers.unregister(auto_resolve)
     except:
