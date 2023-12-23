@@ -73,7 +73,7 @@ class Node:
     def set_properties(self,**kwargs):
         for prop in get_unique_subclass_properties(self.type):
             argname = lower_snake_case(prop.identifier)
-            value = kwargs.pop(argname,None)#kwargs.get(argname,None)
+            value = kwargs.pop(argname,None)
             if value is not None:
                 if isinstance(value, list) and len(value) > 0 and isinstance(value[0], Curve):
                     for i, curve in enumerate(value):

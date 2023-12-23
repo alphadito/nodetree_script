@@ -5,7 +5,7 @@ from ..api.util import get_unique_subclass_properties, _as_iterable, title_case,
 from ..api.nodesocket import get_shortened_socket_type_name
 from ..api.nodetree import NodeTree
 from collections import Counter, defaultdict
-from mathutils import Vector
+import mathutils
 
 
 node_groups = [bpy.types.GeometryNodeGroup,bpy.types.ShaderNodeGroup,bpy.types.CompositorNodeGroup,bpy.types.TextureNodeGroup]
@@ -27,7 +27,7 @@ def node_to_script(node):
         value = getattr(node,prop.identifier)
 
         default_value = None if has_variable_input else node_info.default_value[argname][typename][0]
-        if type(value) == Vector:
+        if type(value) == mathutils.Vector:
             value = tuple(value)
 
         if prop.type == 'POINTER':

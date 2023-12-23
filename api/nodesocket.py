@@ -322,8 +322,9 @@ class TextureNodeSocket(NodeSocket):
 def get_shortened_socket_type_name(socket_type):
     return socket_type.__name__.replace('NodeSocket', '')
 
-def create_node_socket_subclasses_for_annotations(base_node_socket_class, module):
+def create_node_socket_subclasses_for_annotations():
     for socket_type in get_bpy_subclasses(bpy.types.NodeSocketStandard):
         name = get_shortened_socket_type_name(socket_type)
-        module.__dict__[name] = type(name, (base_node_socket_class,), { 'socket_type': socket_type.__name__, '__module__': module.__name__})
+        globals()[name] = type(name, (NodeSocket,), { 'socket_type': socket_type.__name__})
 
+create_node_socket_subclasses_for_annotations()

@@ -6,7 +6,8 @@ from . import nodesocket
 from .nodetree import NodeTree
 from .node import Node
 from .util import lower_snake_case, title_case, upper_snake_case, get_bpy_subclasses, get_unique_subclass_properties, _as_iterable
-from mathutils import Vector
+import mathutils
+
 
 class NodeInfo():
     def __init__(self, node_type):
@@ -23,11 +24,13 @@ class NodeRegistrar:
     socket_type_with_none_subtype = {}
     all_node_info = {}
 
+
     def __init__(self):
         self.node_socket_class = None
         self.node_info = None
         self.node_infos=[]
         self.enums = defaultdict(list)
+        self.math_funcs = []
 
     @staticmethod
     def remove_socket_subtype(socket_type):
@@ -72,7 +75,7 @@ class NodeRegistrar:
                 typename = node_prop.type.title()
 
             default_value = getattr(self.node_instance,node_prop.identifier)
-            if type(default_value) == Vector:
+            if type(default_value) == mathutils.Vector:
                 default_value = tuple(default_value)
             self.node_info.input_index[node_prop.identifier] = len(self.node_info.default_value[argname][typename])
             self.node_info.default_value[argname][typename].append(default_value)
@@ -120,30 +123,34 @@ class NodeRegistrar:
     math_aliases= {'cosine':'cos','sine':'sin','tangent':'tan',
                 'arcsine':'asin','arccosine':'acos','arctangent':'atan','arctan2':'atan2'}
     def add_math_functions(self):
-        def _math(*vectors_or_values,operation=None):
-            if type(vectors_or_values[0]) == tuple:
-                vector_like = True
-            elif isinstance(vectors_or_values[0],nodesocket.NodeSocket):
-                vector_like = vectors_or_values[0]._socket.type in  ['VECTOR','RGBA']
-            else:
-                vector_like = False
-            if len(vectors_or_values) == 1:
-                vectors_or_values = vectors_or_values[0]
-            if vector_like:
-                return vector_math(operation=operation, vector=vectors_or_values)
-            else:
-                return math(operation=operation, value=vectors_or_values)
-
         operations = list(Math.Operation.__members__) + list(VectorMath.Operation.__members__)
         for operation in operations:
-            if lower_snake_case(operation) not in globals():
-                globals()[lower_snake_case(operation)]= partial(_math,operation=operation)
-
+            if lower_snake_case(operation) not in ['compare']:
+                globals()[lower_snake_case(operation)]= partial(NodeRegistrar._math,operation=operation,math=math,vector_math=vector_math)
+                self.math_funcs.append(lower_snake_case(operation))
         for name,alias in self.__class__.math_aliases.items():
             globals()[alias]=globals()[name]
+            self.math_funcs.append(alias)
+
+    @staticmethod
+    def _math(*vectors_or_values,operation=None,math=None,vector_math=None):
+        from . import nodesocket
+        if type(vectors_or_values[0]) == tuple:
+            vector_like = True
+        elif isinstance(vectors_or_values[0],nodesocket.NodeSocket):
+            vector_like = vectors_or_values[0]._socket.type in  ['VECTOR','RGBA']
+        else:
+            vector_like = False
+        if len(vectors_or_values) == 1:
+            vectors_or_values = vectors_or_values[0]
+        if vector_like:
+            return vector_math(operation=operation, vector=vectors_or_values)
+        else:
+            return math(operation=operation, value=vectors_or_values)
 
     def clean_up(self):
         NodeTree.node_trees.remove(self.node_tree)
+
 
 def collect_node_types_to_register():
     node_types_to_register = []

@@ -52,6 +52,7 @@ class Docs():
             contents.append(self.import_string() )
             contents.append(self.enums())
             contents.append(self.node_funcs())
+            contents.append(self.math_funcs())
 
             contents = ''.join(contents)
             fpy.write(contents)
@@ -90,11 +91,16 @@ class Docs():
             functions.append( f'{indent}def {node_info.func_name}{signature} -> {return_type_hint}: """![]({node_info.image}.webp)"""\n' )
         return ''.join(functions)
 
+    def math_funcs(self):
+        return ''.join([f'def {func}(*vectors_or_values): pass\n' for func in self.nr.math_funcs])
+
     def py_files(self):
-        py_files = glob.glob( absolute_path('**/*.py'), recursive=True )
-        excluded_files = glob.glob( absolute_path(os.path.join('api','dynamic','*.py')  ) ) + glob.glob( absolute_path(os.path.join('typeshed/**','*.py')  ),recursive=True ) + [ absolute_path('__init__.py') ]
-        contents = "\n\n".join(
-            f"# {os.path.basename(path)}\n{open(path).read()}"
+        def folder_glob(*args):
+            return glob.glob( absolute_path(os.path.join(*args,'**','*.py')  ),recursive=True )
+        py_files = folder_glob()
+        excluded_files = folder_glob('api','dynamic') + folder_glob('typeshed') + folder_glob('examples') + [ absolute_path('__init__.py') ]
+        contents = "".join(
+            f"# {os.path.basename(path)}\n{open(path).read()}\n\n"
             for path in py_files if path not in excluded_files
         )
         return contents
