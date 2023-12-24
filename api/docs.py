@@ -103,6 +103,7 @@ class Docs():
             f"# {os.path.basename(path)}\n{open(path).read()}\n\n"
             for path in py_files if path not in excluded_files
         )
+        contents = "\n".join( [ line for line in contents.split('\n') if not( line.startswith('from') or line.startswith('import') ) ] )
         return contents
 
     def node_socket_subclasses(self):
