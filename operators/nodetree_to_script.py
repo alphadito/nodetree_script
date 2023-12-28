@@ -201,7 +201,7 @@ def nodes_to_script(nodes,make_function=False):
     script = delim.join(script_lines)
 
     if make_function:
-        default_value_str = lambda val: f' = {val.default_value}' if val.default_value is not None else ''
+        default_value_str = lambda val: f' = {repr(val.default_value)}' if val.default_value is not None else ''
         function_def_script_line = f"def {node_tree.name}_copy({', '.join([f'{arg}: {val.socket_type}{default_value_str(val)}' for arg, val in inputs.items()])}):"
         return_script_line = f"    return {', '.join(outputs)}"
         script = '\n'.join([f"@{node_tree.type.lower()}tree",function_def_script_line,'    '+script,return_script_line])
