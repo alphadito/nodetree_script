@@ -1,27 +1,16 @@
 import bpy
 import typing
 from collections import deque, Counter
-from .util import topo_sort
+from .util import level_topo_sort
 
 def _arrange(node_tree, padding: typing.Tuple[float, float] = (50, 25)):
-    # Organize the nodes into columns based on their links.
-    columns: typing.List[typing.List[typing.Any]] = []
-
     graph = { node:set() for node in node_tree.nodes }
     node_input_link_count = Counter()
     for link in node_tree.links:
         graph[link.from_node].add(link.to_node)
         node_input_link_count[link.to_socket] += 1
-    sorted_nodes = topo_sort(graph)
 
-    column_index = {}
-    for node in reversed(sorted_nodes):
-        column_index[node] = max([ column_index[adj_node] for adj_node in graph[node] ], default=-1) + 1
-        if column_index[node] == len(columns):
-            columns.append([node])
-        else:
-            columns[column_index[node]].append(node)
-    columns = reversed(columns)
+    columns = level_topo_sort(graph)
 
     # Arrange the columns, computing the size of the node manually so arrangement can be done without UI being visible.
     UI_SCALE = bpy.context.preferences.view.ui_scale

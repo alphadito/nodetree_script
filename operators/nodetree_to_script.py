@@ -1,7 +1,7 @@
 import bpy
 import numpy as np
 from ..api.noderegistrar import NodeRegistrar,upper_snake_case
-from ..api.util import get_unique_subclass_properties, _as_iterable, title_case, lower_snake_case, enabled_sockets, Attrs, topo_sort
+from ..api.util import get_unique_subclass_properties, _as_iterable, title_case, lower_snake_case, enabled_sockets, Attrs, level_topo_sort
 from ..api.nodesocket import get_shortened_socket_type_name
 from ..api.nodetree import NodeTree
 from collections import Counter, defaultdict
@@ -86,7 +86,9 @@ def nodes_to_script(nodes,make_function=False):
         if link.from_node in graph and link.to_node in graph:
             graph[link.from_node].add(link.to_node)
             links.append(link)
-    sorted_nodes = topo_sort(graph)
+
+    columns = level_topo_sort(graph)
+    sorted_nodes = [node for col in columns for node in col]
 
     symbol_count = Counter()
     script_info={}

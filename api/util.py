@@ -53,3 +53,15 @@ def topo_sort(graph):
                 queue.append(v)
     return topo_order
 
+def level_topo_sort(graph):
+    sorted_nodes = topo_sort(graph)
+    levels = []
+    level_index = {}
+    for node in reversed(sorted_nodes):
+        level_index[node] = max([ level_index[adj_node] for adj_node in graph[node] ], default=-1) + 1
+        if level_index[node] == len(levels):
+            levels.append([node])
+        else:
+            levels[level_index[node]].append(node)
+    levels = reversed(levels)
+    return levels
