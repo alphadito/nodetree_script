@@ -147,7 +147,9 @@ class NodeTree:
     def set_tree_input(self,i,input_info):
         if i < len(self._inputs):
             self._inputs[i].name = input_info.name
-            self._inputs[i].socket_type = input_info.socket_type
+            if self._inputs[i].socket_type != input_info.socket_type:
+                self._inputs[i].socket_type = input_info.socket_type
+                self._inputs = self.inputs
             tree_input = self._inputs[i]
         else:
             tree_input = self._node_tree.interface.new_socket( name=input_info.name,socket_type=input_info.socket_type, in_out='INPUT')
