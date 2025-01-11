@@ -107,7 +107,7 @@ class Node:
 
     def handle_iterable_inputs(self,value,node_input_list):
         if node_input_list[0].is_multi_input:
-            values = value
+            values = value[::-1] # when multiple links are created to the same input socket the order is reversed (.e.g. with join_geometry)
             node_input_list = [node_input_list[0]]*len(values)
         else:
             if ( not hasattr(value, '__iter__') or len(node_input_list) == 1  ):
