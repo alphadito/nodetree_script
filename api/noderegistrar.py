@@ -12,8 +12,12 @@ import mathutils
 class NodeInfo():
     def __init__(self, node_type):
         self.type = node_type
-        self.func_name = lower_snake_case(node_type.bl_rna.name)
-        self.namespace = title_case(node_type.bl_rna.name)
+        if node_type.bl_rna.name == "Group":
+            name = node_type.bl_rna.identifier
+        else:
+            name = node_type.bl_rna.name
+        self.func_name = lower_snake_case(name)
+        self.namespace = title_case(name)
         self.outputs = {}
         self.primary_arg = None
         self.default_value = defaultdict(lambda: defaultdict(list))
