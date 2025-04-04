@@ -18,7 +18,6 @@ def node_to_script(node):
     node_type = type(node)
     node_info = NodeRegistrar.all_node_info[node_type]
     func_name = node_info.func_name
-    has_variable_input = node_type in ( [bpy.types.NodeGroupOutput] + node_groups )
     args=defaultdict(list)
 
     for prop in get_unique_subclass_properties(node_info.type):
@@ -26,7 +25,11 @@ def node_to_script(node):
         argname = lower_snake_case(prop.identifier)
         value = getattr(node,prop.identifier)
 
-        default_value = None if has_variable_input else node_info.default_value[argname][typename][0]
+        if len(node_info.default_value[argname][typename]) > 0:
+            default_value = node_info.default_value[argname][typename][0]
+        else:
+            default_value = None
+
         if type(value) == mathutils.Vector:
             value = tuple(value)
 
@@ -55,10 +58,15 @@ def node_to_script(node):
             args[argname].append([])
             continue
         value = getattr(node_input,'default_value',None)
-        default_value = None if has_variable_input else node_info.default_value[argname][typename][0]
+        
+        if len(node_info.default_value[argname][typename]) > 0:
+            default_value = node_info.default_value[argname][typename][0]
+        else:
+            default_value = None
+        
         if node_input.type in ['VALUE','INT','VECTOR','RGBA','ROTATION']:
             value = tuple(_as_iterable(value))
-            is_default_value = False if has_variable_input else np.mean( np.abs( np.array( value  ) - np.array( default_value  ) ) ) < 1e-6
+            is_default_value = False if default_value is None else np.mean( np.abs( np.array( value  ) - np.array( default_value  ) ) ) < 1e-6
             value = value if len(value) > 1 else value[0]
         else:
             is_default_value = value == default_value
@@ -149,7 +157,7 @@ def nodes_to_script(nodes,make_function=False):
 
         if no_args_input_node:
             data_path = f'nodes["{node.name}"].outputs[0].default_value'
-            fcurve = node_tree.animation_data.drivers.find(data_path)
+            fcurve = node_tree.animation_data.drivers.find(data_path) if node_tree.animation_data else None
             if fcurve:
                 func_call = f"scripted_expression('{fcurve.driver.expression}')"
             else:
