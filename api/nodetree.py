@@ -102,7 +102,7 @@ class NodeTree:
         return param_infos
 
     def get_param_info_for_input_group(self,param):
-        param_info=ParamInfo(param.name, is_input_group=True, builder_input=param.annotation())
+        param_info=ParamInfo(param.name, is_input_group=True, builder_input=param.annotation() if param.default is inspect.Parameter.empty else param.default)
         for group_param, group_annotation in param.annotation.__annotations__.items():
             name = param.annotation.prefix+group_param
             socket_type = group_annotation.socket_type

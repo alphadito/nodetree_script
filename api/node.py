@@ -3,6 +3,7 @@ import enum
 from .state import State
 from .static.curve import Curve
 from .util import lower_snake_case, get_unique_subclass_properties, _as_iterable, enabled_sockets
+from .static.input_group import InputGroup
 
 class NodeOutputs(dict):
     def __init__(self, *args, **kwargs):
@@ -53,6 +54,11 @@ class Node:
 
     @staticmethod
     def build_node(primary_arg=None,node_type=None,get_socket_if_singular_output=True,return_node=False,**kwargs):
+        for k, v in kwargs.copy().items():
+            if isinstance(v, InputGroup):
+                kwargs.update(v.__dict__)
+                del kwargs[k]
+
         node = Node(node_type)
         if primary_arg:
             node.set_primary_arg(primary_arg)
