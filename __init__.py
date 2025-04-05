@@ -50,11 +50,11 @@ bpy.app.timers.register(create_documentation)
 
 
 bl_info = {
-    "name" : "Geometry Script",
-    "author" : "Carson Katri",
-    "description" : "Python scripting for geometry nodes",
+    "name" : "NodeTree Script",
+    "author" : "Alfredo Peguero, Carson Katri",
+    "description" : "Python scripting for geometry/shader/compositor/texture nodes",
     "blender" : (3, 0, 0),
-    "version" : (0, 1, 2),
+    "version" : (0, 2, 0),
     "location" : "",
     "warning" : "",
     "category" : "Node"
@@ -66,7 +66,7 @@ def copy_menu(self, context):
 
 
 class TEXT_MT_templates_geometryscript(bpy.types.Menu):
-    bl_label = "Geometry Script"
+    bl_label = "NodeTree Script"
 
     def draw(self, _context):
         self.path_menu(
@@ -93,7 +93,7 @@ class GeometryScriptSettings(bpy.types.PropertyGroup):
 
 class GeometryScriptMenu(bpy.types.Menu):
     bl_idname = "TEXT_MT_geometryscript"
-    bl_label = "Geometry Script"
+    bl_label = "NodeTree Script"
 
     def draw(self, context):
         layout = self.layout
