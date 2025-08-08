@@ -303,7 +303,7 @@ class ShaderNodeSocket(NodeSocket):
 
 class CompositorNodeSocket(NodeSocket):
     type_to_node = {
-                float: (bpy.types.CompositorNodeValue, None),
+                float: (bpy.types.ShaderNodeValue, None),
                 tuple: {}
                 }
     @classmethod
@@ -328,3 +328,5 @@ def create_node_socket_subclasses_for_annotations():
         globals()[name] = type(name, (NodeSocket,), { 'socket_type': socket_type.__name__})
 
 create_node_socket_subclasses_for_annotations()
+
+from .compatibility.nodesocket import *
