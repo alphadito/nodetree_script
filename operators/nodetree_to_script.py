@@ -13,6 +13,9 @@ is_math_operation_arg = lambda func_name, argname: func_name in ['math','vector_
 is_math_vector_or_value_arg = lambda func_name, argname: func_name in ['math','vector_math'] and argname in ['vector','value']
 is_node_tree_input_arg = lambda node_type, argname: node_type in node_groups and argname == 'node_tree'
 is_curve_mapping_arg = lambda value: type(value) == bpy.types.CurveMapping
+no_args_input_nodes =  [bpy.types.ShaderNodeValue,bpy.types.ShaderNodeRGB]
+
+from .compatibility.nodetree_to_script import *
 
 def node_to_script(node):
     node_type = type(node)
@@ -152,7 +155,7 @@ def nodes_to_script(nodes,make_function=False):
         func_name = script_info[node].func_name
         func_args = []
         alt_func_name = None
-        no_args_input_node = type(node) in [bpy.types.ShaderNodeValue,bpy.types.ShaderNodeRGB,bpy.types.CompositorNodeValue]
+        no_args_input_node = type(node) in no_args_input_nodes
 
 
         if no_args_input_node:
