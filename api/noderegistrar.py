@@ -7,13 +7,16 @@ from .nodetree import NodeTree
 from .node import Node
 from .util import lower_snake_case, title_case, upper_snake_case, get_bpy_subclasses, get_unique_subclass_properties, _as_iterable
 import mathutils
-
+import builtins
+builtins_set = set(dir(builtins))
 
 class NodeInfo():
     def __init__(self, node_type):
         self.type = node_type
         if node_type.bl_rna.name == "Group":
             name = node_type.bl_rna.identifier
+        elif node_type.bl_rna.name.lower() in builtins_set:
+            name = f"{node_type.bl_rna.name}_"
         else:
             name = node_type.bl_rna.name
         self.func_name = lower_snake_case(name)
